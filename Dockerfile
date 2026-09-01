@@ -22,8 +22,8 @@ LABEL org.opencontainers.image.version="1.0.0"
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 
-# requests pinned to match upstream; mcp[cli] pinned to a FastMCP-compatible <2 line.
-RUN pip install --no-cache-dir --no-input 'requests==2.31.0' 'mcp[cli]==1.29.1'
+# requests pinned; mcp[cli] pinned to a FastMCP-compatible <2 line.
+RUN pip install --no-cache-dir --no-input 'requests==2.32.0' 'mcp[cli]==1.29.1'
 
 COPY server.py detail.py run_http.py ./
 
