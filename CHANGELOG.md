@@ -4,6 +4,14 @@ All notable changes to this project follow [Semantic Versioning](https://semver.
 Releases are tagged `v<major>.<minor>.<patch>` and published to GHCR
 (`ghcr.io/msklv/yandex-search-mcp-server:v<version>`).
 
+## [1.3.0] - 2026-09-01
+
+### Added
+- Multi-architecture Docker image: `linux/amd64` + `linux/arm64` (Apple Silicon / M-series).
+
+### Changed
+- Dockerfile OCI label `org.opencontainers.image.version` → `1.3.0`.
+
 ## [1.2.0] - 2026-09-01
 
 ### Fixed
