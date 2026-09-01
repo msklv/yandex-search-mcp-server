@@ -37,6 +37,26 @@ All search types of the Yandex Search API v2 are exposed. Russian is the default
 
 Docs (search types & modes): <https://aistudio.yandex.ru/ru/docs/search-api/concepts/>
 
+## Container image (GHCR)
+
+Every push to `main` (and every `v*` tag) builds and publishes the image to the
+**GitHub Container Registry**:
+
+```
+ghcr.io/msklv/yandex-search-mcp-http:latest     # default branch
+ghcr.io/msklv/yandex-search-mcp-http:main       # branch ref
+ghcr.io/msklv/yandex-search-mcp-http:v<tag>     # semver tag
+```
+
+The container serves the MCP server over StreamableHTTP on port `8766`:
+
+```bash
+docker run --rm -p 8766:8766 \
+  -e SEARCH_API_KEY=... [-e FOLDER_ID=...] \
+  ghcr.io/msklv/yandex-search-mcp-http:latest
+# MCP endpoint: http://<host>:8766/mcp
+```
+
 ## Requirements
 
 - Python 3.10+ / Docker 20+.
