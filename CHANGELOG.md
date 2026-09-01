@@ -4,6 +4,22 @@ All notable changes to this project follow [Semantic Versioning](https://semver.
 Releases are tagged `v<major>.<minor>.<patch>` and published to GHCR
 (`ghcr.io/msklv/yandex-search-mcp-server:v<version>`).
 
+## [1.2.0] - 2026-09-01
+
+### Fixed
+- Reverted `mcp` to `1.29.1`. `mcp 2.x` renamed `FastMCP`→`MCPServer` and removed
+  `mcp.server.fastmcp`, breaking the server; the Dependabot bump had also desynced
+  `requirements.txt` (`2.1.1`) from the Dockerfile (`1.29.1`).
+- `get_operation` tool: fixed infinite recursion — the tool name shadowed the imported
+  `detail.get_operation`; now imported as `_get_operation`.
+
+### Added
+- Unit tests (`tests/`): request building, XML parsing, mocked-HTTP calls and MCP tool
+  contracts for all search types (`test_detail.py`, `test_server.py`).
+
+### Changed
+- Dockerfile OCI label `org.opencontainers.image.version` → `1.2.0`.
+
 ## [1.1.0] - 2026-09-01
 
 ### Security

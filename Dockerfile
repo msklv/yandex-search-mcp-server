@@ -17,7 +17,7 @@ FROM python:3.10-slim
 LABEL org.opencontainers.image.title="Yandex Search API MCP Server (HTTP)"
 LABEL org.opencontainers.image.description="MCP server for Yandex Search API v2 served over StreamableHTTP"
 LABEL org.opencontainers.image.vendor="Yandex LLC + HTTP-MCP wrapper"
-LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.version="1.2.0"
 
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1
