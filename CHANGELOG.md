@@ -4,6 +4,15 @@ All notable changes to this project follow [Semantic Versioning](https://semver.
 Releases are tagged `v<major>.<minor>.<patch>` and published to GHCR
 (`ghcr.io/msklv/yandex-search-mcp-server:v<version>`).
 
+## [1.3.1] - 2026-09-01
+
+### Fixed
+- `get_operation` polled operations on the wrong host (`searchapi.../v2/operations/{id}`
+  returned 404). Operations live on `operation.api.cloud.yandex.net/operations/{id}`.
+  Host is overridable via `OPERATION_API_BASE`.
+- CI: unit tests now run as a `test` job and gate the GHCR `build-and-push` (no publish
+  on broken code). `get_operation` covered for both the default and overridden host.
+
 ## [1.3.0] - 2026-09-01
 
 ### Added

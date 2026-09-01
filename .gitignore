@@ -4,6 +4,7 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+.test-venv/
 
 # Secrets / local config
 .env

@@ -206,12 +206,23 @@ def test_call_web_search_async_returns_operation(monkeypatch, api_key):
 
 
 def test_get_operation(monkeypatch, api_key):
+    monkeypatch.delenv("OPERATION_API_BASE", raising=False)
     calls = _watch(
         monkeypatch, "get",
         lambda url, kw: FakeResp(json.dumps({"id": "o", "done": True})),
     )
     assert detail.get_operation("o")["done"] is True
-    assert calls[0][0].endswith("/operations/o")
+    assert calls[0][0] == "https://operation.api.cloud.yandex.net/operations/o"
+
+
+def test_get_operation_honors_operation_api_base_override(monkeypatch, api_key):
+    monkeypatch.setenv("OPERATION_API_BASE", "https://ops.example.test")
+    calls = _watch(
+        monkeypatch, "get",
+        lambda url, kw: FakeResp(json.dumps({"id": "o", "done": True})),
+    )
+    assert detail.get_operation("o")["done"] is True
+    assert calls[0][0] == "https://ops.example.test/operations/o"
 
 
 # --- gen search (FOLDER_ID required) ---------------------------------------------

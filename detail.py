@@ -149,8 +149,10 @@ def get_operation(operation_id: str) -> dict:
     When ``done`` is true the result is available under ``response``
     (a ``WebSearchResponse`` whose ``rawData`` is base64-encoded XML).
     """
+    # Operations endpoint is on the dedicated operation host, NOT searchapi (that returns 404).
+    op_base = os.environ.get("OPERATION_API_BASE", "https://operation.api.cloud.yandex.net")
     with requests.get(
-        f"{API_BASE}/operations/{operation_id}", headers=_headers(), timeout=DEFAULT_TIMEOUT
+        f"{op_base}/operations/{operation_id}", headers=_headers(), timeout=DEFAULT_TIMEOUT
     ) as resp:
         resp.raise_for_status()
         return resp.json()
