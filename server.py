@@ -25,7 +25,7 @@ from detail import (
     call_web_search,
     call_web_search_async,
     extract_documents_from_xml,
-    get_operation,
+    get_operation as _get_operation,
     _doc_elements,
 )
 
@@ -95,7 +95,7 @@ def get_operation(operation_id: str) -> str:
              XML search results.
     """
     try:
-        return json.dumps(get_operation(operation_id), ensure_ascii=False, indent=2)
+        return json.dumps(_get_operation(operation_id), ensure_ascii=False, indent=2)
     except Exception as exc:
         return json.dumps({"error": str(exc)}, ensure_ascii=False)
 
