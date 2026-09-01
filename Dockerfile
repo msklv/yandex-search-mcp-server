@@ -23,7 +23,7 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 
 # requests pinned; mcp[cli] pinned to a FastMCP-compatible <2 line.
-RUN pip install --no-cache-dir --no-input 'requests==2.32.4' 'mcp[cli]==1.29.1'
+RUN pip install --no-cache-dir --no-input 'requests==2.34.2' 'mcp[cli]==1.29.1'
 
 COPY server.py detail.py run_http.py ./
 
