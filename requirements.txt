@@ -1,4 +1,4 @@
 # Pinned to a FastMCP-compatible line. Upstream requirements (`mcp[cli]==0.1.0`) is stale and
 # mcp 2.x renamed FastMCP→MCPServer, breaking the API this server uses.
 requests==2.34.2
-mcp[cli]==1.29.1
+mcp[cli]==2.1.1
