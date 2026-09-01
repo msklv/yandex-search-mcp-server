@@ -1,0 +1,17 @@
+version: 2
+updates:
+  # Python dependencies (requirements.txt) — weekly pull requests.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+
+  # GitHub Actions — keep the workflow actions patched.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5

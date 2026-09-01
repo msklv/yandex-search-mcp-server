@@ -1,0 +1,46 @@
+name: "security-scan"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Mon 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  pip-audit:
+    name: Python dependencies (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run pip-audit
+        uses: pypa/gh-action-pip-audit@v1.1.1
+        with:
+          package-manager: requirements
+          requirements-files: requirements.txt
+
+  trivy:
+    name: Vulnerability scan (Trivy)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+          exit-code: "0" # report, don't block on findings
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
