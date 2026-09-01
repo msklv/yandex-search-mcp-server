@@ -4,6 +4,13 @@ All notable changes to this project follow [Semantic Versioning](https://semver.
 Releases are tagged `v<major>.<minor>.<patch>` and published to GHCR
 (`ghcr.io/msklv/yandex-search-mcp-server:v<version>`).
 
+## [1.1.0] - 2026-09-01
+
+### Security
+- Added CI security pipeline: CodeQL (static analysis), Trivy (CVE fs-scan),
+  pip-audit (Python advisories) and Dependabot (weekly `pip` / `github-actions`).
+- `requests` bumped `2.31.0` → `2.34.2` to close PYSEC-2026-1873 / 1872 / 2275.
+
 ## [1.0.0] - 2026-09-01
 
 Initial release: StreamableHTTP MCP server for all Yandex Search API v2 search types.
