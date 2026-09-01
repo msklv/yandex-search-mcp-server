@@ -1,7 +1,7 @@
 # Yandex Search API MCP server — StreamableHTTP build
 
 Self-hostable [Model Context Protocol](https://modelcontextprotocol.io) server for the
-[Yandex Search API v2](https://aistudio.yandex.ru/ru/docs/search-api/) — **web search only**,
+[Yandex Search API v2](https://aistudio.yandex.ru/ru/docs/search-api/) — **all search types**,
 served over **StreamableHTTP** (`/mcp`) so it can run as an HTTP-MCP backend in a Docker/Compose
 stack (alongside other HTTP-MCP servers).
 
@@ -12,9 +12,9 @@ product and not endorsed by Yandex.** Two deviations:
 
 1. **HTTP transport** — adds `run_http.py`, which re-exports the same FastMCP instance and serves
    it over StreamableHTTP, so the container behaves like any HTTP-MCP service.
-2. **Search only** — the AI/generative (`yazeka`) endpoint is intentionally **not** exposed; only
-   `web_search`. Russian is the default search type (`SEARCH_TYPE_RU`, `LOCALIZATION_RU`,
-   region `225` = Россия).
+2. **All search types** — builds on upstream's `web_search` and also exposes the other Search API v2
+   endpoints (`gen_search`, `image_search`, `image_search_by_image`, plus deferred text search).
+   Russian is the default search type (`SEARCH_TYPE_RU`, `LOCALIZATION_RU`, region `225` = Россия).
 
 > ⚠️ Derivative work. Files inherited from upstream (`server.py`, `detail.py`) are © 2025
 > **YANDEX LLC**, Apache-2.0. See [LICENSE](./LICENSE).
@@ -43,9 +43,9 @@ Every push to `main` (and every `v*` tag) builds and publishes the image to the
 **GitHub Container Registry**:
 
 ```
-ghcr.io/msklv/yandex-search-mcp-http:latest     # default branch
-ghcr.io/msklv/yandex-search-mcp-http:main       # branch ref
-ghcr.io/msklv/yandex-search-mcp-http:v<tag>     # semver tag
+ghcr.io/msklv/yandex-search-mcp-server:latest     # default branch
+ghcr.io/msklv/yandex-search-mcp-server:main       # branch ref
+ghcr.io/msklv/yandex-search-mcp-server:v1.2.3   # semver tag
 ```
 
 The container serves the MCP server over StreamableHTTP on port `8766`:
@@ -53,7 +53,7 @@ The container serves the MCP server over StreamableHTTP on port `8766`:
 ```bash
 docker run --rm -p 8766:8766 \
   -e SEARCH_API_KEY=... [-e FOLDER_ID=...] \
-  ghcr.io/msklv/yandex-search-mcp-http:latest
+  ghcr.io/msklv/yandex-search-mcp-server:latest
 # MCP endpoint: http://<host>:8766/mcp
 ```
 
@@ -82,10 +82,10 @@ export SEARCH_API_KEY=...
 python3 run_http.py
 
 # docker
-docker build -t yandex-search-mcp-http .
+docker build -t yandex-search-mcp-server .
 docker run --rm -p 8766:8766 \
   -e SEARCH_API_KEY=... [-e FOLDER_ID=...] \
-  yandex-search-mcp-http
+  yandex-search-mcp-server
 ```
 
 ## web_search
