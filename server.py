@@ -1,145 +1,160 @@
 """
-Yandex Search API MCP Server (web search)
+Yandex Search API MCP Server — all search types.
 
-Provides Yandex Search API v2 web search via MCP. The AI/generative (yazeka)
-endpoint is intentionally NOT exposed — only `web_search`.
+Exposes every type of the Yandex Search API v2 over MCP:
+
+- ``web_search``             text search, sync  (returns parsed results)
+- ``web_search_async``       text search, deferred -> Operation, poll with ``get_operation``
+- ``get_operation``         fetch a deferred search Operation
+- ``gen_search``            generative answer (YandexGPT) — requires FOLDER_ID
+- ``image_search``          search images by text description
+- ``image_search_by_image``  search images by a given image (url / data / id)
 
 Russian is the default search type (SEARCH_TYPE_RU, LOCALIZATION_RU, region 225 = Россия).
 
 Modified from yandex/yandex-search-mcp-server (c) 2025 YANDEX LLC, Apache-2.0.
-Changes: removed the AI/yazeka endpoint (search-only). Not an official Yandex product.
+Changes: expanded to all search types. Not an official Yandex product.
 """
 import json
-import re
-from typing import Any, Dict
 
 from mcp.server.fastmcp import FastMCP
-from detail import validate_input_data, call_web_search
+from detail import (
+    call_gen_search,
+    call_image_search,
+    call_search_by_image,
+    call_web_search,
+    call_web_search_async,
+    extract_documents_from_xml,
+    get_operation,
+    _doc_elements,
+)
 
-# Create an MCP server
-mcp = FastMCP(name="Yandex Search Api v2, web")
-
-
-def extract_documents_from_xml(xml_content):
-    """Извлекает отдельные документы из XML контента"""
-    doc_strings = []
-    lines = xml_content.split('\n')
-    current_doc = []
-    in_doc = False
-
-    for line in lines:
-        if '<doc ' in line and 'id=' in line:
-            in_doc = True
-            current_doc = [line]
-        elif in_doc and '</doc>' in line:
-            current_doc.append(line)
-            doc_strings.append('\n'.join(current_doc))
-            in_doc = False
-        elif in_doc:
-            current_doc.append(line)
-
-    return doc_strings
+mcp = FastMCP(name="Yandex Search Api v2 (all search types)")
 
 
-def clean_text(text):
-    """Очищает текст от hlword тегов"""
-    if not text:
-        return ""
-    cleaned = re.sub(r'<hlword>|</hlword>', '', text)
-    return cleaned.strip()
-
-
-def extract_document_elements(doc_string):
-    """Извлекает элементы из строки документа"""
-    url_match = re.search(r'<url>(.*?)</url>', doc_string)
-    headline_match = re.search(r'<headline>(.*?)</headline>', doc_string)
-    title_match = re.search(r'<title>(.*?)</title>', doc_string)
-    passage_matches = re.findall(r'<passage>(.*?)</passage>', doc_string)
-    extended_text_match = re.search(r'<extended-text>(.*?)</extended-text>', doc_string)
-
-    return {
-        'url': url_match.group(1) if url_match else None,
-        'headline': headline_match.group(1) if headline_match else None,
-        'title': title_match.group(1) if title_match else None,
-        'passages': passage_matches,
-        'extended_text': extended_text_match.group(1) if extended_text_match else None
-    }
-
-
-def get_best_content(elements):
-    """Выбирает лучший контент из доступных элементов"""
-    if elements['headline']:
-        return clean_text(elements['headline']), "headline"
-    elif elements['title']:
-        return clean_text(elements['title']), "title"
-    elif elements['passages']:
-        cleaned_passages = [clean_text(p) for p in elements['passages'] if p]
-        return " ".join(cleaned_passages), "passages"
-    elif elements['extended_text']:
-        return clean_text(elements['extended_text']), "extended-text"
-    else:
-        return None, None
-
-
-def process_single_document(doc_string):
-    """Обрабатывает один документ и возвращает результат"""
-    elements = extract_document_elements(doc_string)
-
-    if not elements['url']:
-        return None
-
-    content, source = get_best_content(elements)
-
-    if content:
-        return {
-            'data': content,
-            'source': elements['url']
-        }
-
-    return None
+def _run(fn, body):
+    """Run a detail call, returning a JSON string on success or {'error': ...}."""
+    try:
+        result = fn(body)
+    except Exception as exc:  # surface validation / auth / HTTP errors to the agent
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+    return json.dumps(result, ensure_ascii=False, indent=2)
 
 
 @mcp.tool()
 def web_search(body: dict) -> str:
-    """
-    Search the web via Yandex Search API. Russian by default.
+    """Search the web via Yandex Search API v2 (sync, XML). Russian by default.
 
     Args:
-        body (dict): required. input containing:
+        body (dict): input containing:
             - query: required. Search query string (Russian supported natively).
-            - search_region: optional. Search type code, default 'ru'.
-                  'ru'  — Russian (default),
-                  'tr'  — Turkish,
-                  'com' — International,
-                  'kk'  — Kazakh, 'be' — Belarusian, 'uz' — Uzbek.
-            - region: optional. Numeric Yandex region id to bias ranking, only for 'ru'/'tr'.
-                  Defaults to 225 (Россия) for 'ru'.
-                  Examples: 213 = Москва, 2 = Санкт-Петербург.
-
-        minimal example:
-            "body": { "query": "кофемашина", "search_region": "ru", "region": 213 }
-
+            - search_region: optional. 'ru' (default) | 'tr' | 'com' | 'kk' | 'be' | 'uz'.
+            - region: optional. Numeric Yandex region id, only for 'ru'/'tr' (213 = Москва).
+            - limit: optional. Groups per page, 1..20 (default 5).
     Returns:
-        dict: array of data and source, as JSON (Chinese-style ensure_ascii=False).
+        str: JSON {"responses": [{"data", "source"}], ...} + "count".
     """
-    data = body or {}
-    if error_message := validate_input_data(data, {"query"}):
-        return error_message
+    try:
+        xml = call_web_search(body)
+        responses = []
+        for doc in extract_documents_from_xml(xml):
+            rec = _doc_elements(doc)
+            url = rec.get("url")
+            if not url:
+                continue
+            title = rec.get("headline") or rec.get("title") or rec.get("passage") or ""
+            responses.append({"data": title, "source": url})
+        return json.dumps({"responses": responses, "count": len(responses)}, ensure_ascii=False, indent=2)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
 
-    decoded_data = call_web_search(data)
-    doc_strings = extract_documents_from_xml(decoded_data)
-    response = {'responses': []}
 
-    for doc_string in doc_strings:
-        doc_result = process_single_document(doc_string)
-        if doc_result:
-            response["responses"].append(doc_result)
+@mcp.tool()
+def web_search_async(body: dict) -> str:
+    """Start a deferred (async) text search via Yandex Search API v2.
 
-    return json.dumps(response, ensure_ascii=False, indent=2)
+    Returns an Operation object with an ``id``. Poll with ``get_operation`` until
+    it is ``done``, then the result is in ``response.rawData`` (base64 XML).
+
+    Args:
+        body (dict): same as ``web_search`` (query / search_region / region / limit).
+    Returns:
+        str: JSON operation object ({"id": ..., "done": false, ...}).
+    """
+    return _run(call_web_search_async, body)
+
+
+@mcp.tool()
+def get_operation(operation_id: str) -> str:
+    """Poll a deferred search Operation by its id (from ``web_search_async``).
+
+    Args:
+        operation_id (str): the Operation id returned by ``web_search_async``.
+    Returns:
+        str: JSON Operation. When done, ``response.rawData`` holds base64-encoded
+             XML search results.
+    """
+    try:
+        return json.dumps(get_operation(operation_id), ensure_ascii=False, indent=2)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+
+@mcp.tool()
+def gen_search(body: dict) -> str:
+    """Generative search: web search + a concise answer synthesized by YandexGPT.
+
+    Requires FOLDER_ID (env). Sync only, max 1 req/sec.
+
+    Args:
+        body (dict):
+            - query: required. The question (or pass ``messages`` list of
+              {"role": "ROLE_USER"|"ROLE_ASSISTANT", "content": ...} for chat context).
+            - search_region: optional, default 'ru'.
+            - site | host | url: optional, restrict search scope (mutually exclusive).
+            - fix_misspell: optional bool. Correct query misspellings.
+            - enable_rich_structured_answer: optional bool.
+            - get_partial_results: optional bool. Stream partial JSON-Lines results.
+    Returns:
+        str: JSON response with {message: {content}, sources: [...], hints, ...}.
+    """
+    return _run(call_gen_search, body)
+
+
+@mcp.tool()
+def image_search(body: dict) -> str:
+    """Search images by a text description via Yandex Search API v2 (synconly).
+
+    Args:
+        body (dict):
+            - query: required. Text description of the images to find.
+            - search_region: optional, default 'ru'.
+            - size / orientation / color / format: optional image filters
+              (IMAGE_SIZE_LARGE, IMAGE_ORIENTATION_SQUARE, IMAGE_COLOR_RED, IMAGE_FORMAT_PNG ...).
+            - docs_on_page: optional int 1..100.
+            - site: optional str, restrict to a website.
+    Returns:
+        str: JSON {"images": [{"url", "title", "width", "height", ...}], "count": N}.
+    """
+    return _run(call_image_search, body)
+
+
+@mcp.tool()
+def image_search_by_image(body: dict) -> str:
+    """Search images by a given image (synconly). Provide exactly one of:
+
+    Args:
+        body (dict):
+            - url:  the image URL to search by (optional).
+            - data: base64-encoded image data (optional; max ~3 MB).
+            - id:   CBIR image id (optional).
+            - site: optional, restrict to a website.
+            - page: optional int.
+    Returns:
+        str: JSON {"images": [{"url", "pageTitle", "pageUrl", "width", ...}], ...}.
+    """
+    return _run(call_search_by_image, body)
 
 
 if __name__ == "__main__":
-    try:
-        mcp.run(transport="stdio")
-    except Exception:
-        raise
+    mcp.run(transport="stdio")

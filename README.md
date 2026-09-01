@@ -21,9 +21,21 @@ product and not endorsed by Yandex.** Two deviations:
 
 ## Tools
 
-| Tool | Description |
-|---|---|
-| `web_search` | Real-time web search via Yandex Search API v2; returns `{responses:[{data, source}]}` as JSON. |
+All search types of the Yandex Search API v2 are exposed. Russian is the default
+(`SEARCH_TYPE_RU`, `LOCALIZATION_RU`, region `225` = Россия).
+
+| Tool | Search type | Mode | Response |
+|---|---|---|---|
+| `web_search` | Текстовый (web pages) | sync | parsed `{responses:[{data,source}], count}` |
+| `web_search_async` | Текстовый (web pages) | **deferred** | Operation `{id}` → poll with `get_operation` |
+| `get_operation` | — | — | Operation status + base64 `response.rawData` when `done` |
+| `gen_search` | Генеративный ответ (YandexGPT) | sync | JSON answer + `sources[]` + `hints[]` |
+| `image_search` | Поиск изображений по тексту | sync | `{images:[{url,title,width,height,…}], count}` |
+| `image_search_by_image` | Поиск изображений по изображению | sync | `{images:[…], page, id}` |
+
+> `gen_search` requires the `FOLDER_ID` env var (the Yandex folder the key belongs to).
+
+Docs (search types & modes): <https://aistudio.yandex.ru/ru/docs/search-api/concepts/>
 
 ## Requirements
 
